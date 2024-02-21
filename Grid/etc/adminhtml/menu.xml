@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <menu>
+        <add id="KK_Grid::reviews" title="Reviews" module="KK_Grid" sortOrder="50" resource="KK_Grid::reviews" />
+        <add id="KK_Grid::home" title="Form Reviews" module="KK_Grid" sortOrder="60" action="kk_grid/index/index" resource="KK_Grid::reviews" parent="KK_Grid::reviews" />
+    </menu>
+</config>

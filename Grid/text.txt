@@ -1,0 +1,299 @@
+KK\Grid\Block\Adminhtml\Index\Edit.php
+
+<?php
+
+namespace KK\Grid\Block\Adminhtml\Index;
+
+class Edit extends \Magento\Backend\Block\Widget\Form\Container
+{
+    /**
+     * Core registry.
+     *
+     * @var \Magento\Framework\Registry
+     */
+    protected $_coreRegistry = null;
+
+    /**
+     * @param \Magento\Backend\Block\Widget\Context $context
+     * @param \Magento\Framework\Registry $registry
+     * @param array $data
+     */
+    public function __construct(\Magento\Backend\Block\Widget\Context $context, \Magento\Framework\Registry $registry, array $data = [])
+    {
+        $this->_coreRegistry = $registry;
+        parent::__construct($context, $data);
+    }
+
+    /**
+     *
+     */
+    protected function _construct()
+    {
+        $this->_objectId = 'id';
+        $this->_blockGroup = 'KK_Grid';
+        $this->_controller = 'adminhtml_index';
+        parent::_construct();
+        if ($this->_isAllowedAction('KK_Grid::edit')) {
+            $this->buttonList->update('save', 'label', __('Save'));
+        } else {
+            $this->buttonList->remove('save');
+        }
+        $this->buttonList->remove('reset');
+    }
+
+    /**
+     * Retrieve text for header element depending on loaded image.
+     *
+     * @return \Magento\Framework\Phrase
+     */
+    public function getHeaderText()
+    {
+        return __('Edit Feedback');
+    }
+
+    /**
+     * Check permission for passed action.
+     *
+     * @param string $resourceId
+     *
+     * @return bool
+     */
+    protected function _isAllowedAction($resourceId)
+    {
+        return $this->_authorization->isAllowed($resourceId);
+    }
+
+    /**
+     * Get form action URL.
+     *
+     * @return string
+     */
+    public function getFormActionUrl()
+    {
+        if ($this->hasFormActionUrl()) {
+            return $this->getData('form_action_url');
+        }
+        return $this->getUrl('*/*/save');
+    }
+}
+
+
+
+KK\Grid\Controller\Adminhtml\Index\MassDelete.php
+<?php
+
+namespace KK\Grid\Controller\Adminhtml\Index;
+
+class MassDelete extends \Magento\Backend\App\Action
+{
+    protected $_reviewsFactory;
+
+    public function __construct(
+        \Magento\Backend\App\Action\Context $context,
+        \KK\Grid\Model\ReviewsFactory $reviewsFactory
+    )
+    {
+        $this->_reviewsFactory = $reviewsFactory;
+        parent::__construct($context);
+    }
+
+    public function execute()
+    {
+        $data = $this->getRequest()->getPostValue();
+        $selectedIds = $data['selected'];
+        try {
+            foreach ($selectedIds as $selectedId) {
+                $deleteData = $this->_reviewsFactory->create()->load($selectedId);
+                $deleteData->delete();
+            }
+            $this->messageManager->addSuccess(__('Data has been successfully deleted.'));
+        } catch (\Exception $e) {
+            $this->messageManager->addError(__($e->getMessage()));
+        }
+        $this->_redirect('kk_grid/index/index');
+    }
+
+    /**
+     * @return bool
+     */
+    protected function _isAllowed()
+    {
+        return $this->_authorization->isAllowed('KK_Grid::home');
+    }
+}
+
+
+
+KK\Grid\view\adminhtml\layout\kk_grid_index_delete.xml
+
+<?xml version="1.0"?>
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <referenceContainer name="content">
+            <block class="KK\Grid\Block\Adminhtml\Index\MassDelete" name="delete" />
+        </referenceContainer>
+    </body>
+</page>
+
+
+KK\Grid\view\adminhtml\ui_component\kk_grid_reviews_listing.xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">kk_grid_reviews_listing.kk_grid_reviews_listing_data_source</item>
+            <item name="deps" xsi:type="string">kk_grid_reviews_listing.kk_grid_reviews_listing_data_source</item>
+        </item>
+        <item name="spinner" xsi:type="string">kk_grid_reviews_columns</item>
+
+        <!-- <item name="buttons" xsi:type="array">
+            <item name="add" xsi:type="array">
+                <item name="name" xsi:type="string">add</item>
+                <item name="label" xsi:type="string">Add New Review</item>
+                <item name="class" xsi:type="string">primary</item>
+                <item name="url" xsi:type="string">md_cr/index/new</item>
+            </item>
+        </item> -->
+
+    </argument>
+    <dataSource name="kk_grid_reviews_listing_data_source">
+        <argument name="dataProvider" xsi:type="configurableObject">
+            <argument name="class" xsi:type="string">KK\Grid\Ui\DataProvider\Reviews\ListingDataProvider</argument>
+            <argument name="name" xsi:type="string">kk_grid_reviews_listing_data_source</argument>
+            <argument name="primaryFieldName" xsi:type="string">id</argument>
+            <argument name="requestFieldName" xsi:type="string">id</argument>
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="update_url" xsi:type="url" path="mui/index/render" />
+                    <item name="storageConfig" xsi:type="array">
+                    <item name="indexField" xsi:type="string">id</item>
+                    </item>
+                </item>
+            </argument>
+        </argument>
+        <argument name="data" xsi:type="array">
+            <item name="js_config" xsi:type="array">
+            <item name="component" xsi:type="string">Magento_Ui/js/grid/provider</item>
+            </item>
+        </argument>
+    </dataSource>
+
+    <listingToolbar name="listing_top">
+        <bookmark name="bookmarks"/>
+
+        <columnsControls name="columns_controls"/>
+        <massaction name="listing_massaction">
+            <argument name="data" xsi:type="array">
+                <item name="data" xsi:type="array">
+                    <item name="selectProvider" xsi:type="string">kk_grid_reviews_listing.kk_grid_reviews_listing.kk_grid_columns.ids</item>
+                    <item name="displayArea" xsi:type="string">bottom</item>
+                    <item name="component" xsi:type="string">Magento_Ui/js/grid/tree-massactions</item>
+                    <item name="indexField" xsi:type="string">id</item>
+                </item>
+            </argument>
+            <action name="delete">
+                <argument name="data" xsi:type="array">
+                    <item name="config" xsi:type="array">
+                        <item name="type" xsi:type="string">delete</item>
+                        <item name="label" xsi:type="string" translate="true">Delete</item>
+                        <item name="url" xsi:type="url" path="kk_grid/index/delete"/>
+                        <item name="confirm" xsi:type="array">
+                            <item name="title" xsi:type="string" translate="true">Delete items</item>
+                            <item name="message" xsi:type="string" translate="true">Are you sure you want to delete selected items?</item>
+                        </item>
+                    </item>
+                </argument>
+            </action>
+        </massaction>
+
+        <filters name="listing_filters">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="templates" xsi:type="array">
+                        <item name="filters" xsi:type="array">
+                            <item name="select" xsi:type="array">
+                                <item name="component" xsi:type="string">Magento_Ui/js/form/element/ui-select</item>
+                                <item name="template" xsi:type="string">ui/grid/filters/elements/ui-select</item>
+                            </item>
+                        </item>
+                    </item>
+                </item>
+            </argument>
+        </filters>
+
+        <paging name="listing_paging"/>
+
+    </listingToolbar>
+    <columns name="kk_grid_reviews_columns">
+        <selectionsColumn name="ids">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="indexField" xsi:type="string">id</item>
+                </item>
+            </argument>
+        </selectionsColumn>
+        <column name="id">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">ID</label>
+                <resizeDefaultWidth>25</resizeDefaultWidth>
+            </settings>
+        </column>
+        <column name="name">
+            <settings>
+                <filter>text</filter>
+                <bodyTmpl>ui/grid/cells/text</bodyTmpl>
+                <label translate="true">Customer Name</label>
+            </settings>
+        </column>
+        <column name="gender">
+            <settings>
+                <filter>text</filter>
+                <bodyTmpl>ui/grid/cells/text</bodyTmpl>
+                <label translate="true">Gender</label>
+            </settings>
+        </column>
+        <column name="email">
+            <settings>
+                <filter>text</filter>
+                <bodyTmpl>ui/grid/cells/text</bodyTmpl>
+                <label translate="true">Customer Email</label>
+            </settings>
+        </column>
+        <column name="status">
+            <settings>
+                <filter>text</filter>
+                <bodyTmpl>ui/grid/cells/text</bodyTmpl>
+                <label translate="true">Customer Status</label>
+            </settings>
+        </column>
+        <column name="feedback">
+            <settings>
+                <filter>text</filter>
+                <bodyTmpl>ui/grid/cells/text</bodyTmpl>
+                <label translate="true">Reviews</label>
+            </settings>
+        </column>
+        <column name="created_at">
+            <settings>
+                <filter>dateRange</filter>
+                <bodyTmpl>ui/grid/cells/text</bodyTmpl>
+                <label translate="true">Created Time</label>
+            </settings>
+        </column>
+        <column name="updated_at">
+            <settings>
+                <filter>dateRange</filter>
+                <bodyTmpl>ui/grid/cells/text</bodyTmpl>
+                <label translate="true">Updated Time</label>
+            </settings>
+        </column>
+        <actionsColumn name="actions" class="KK\Grid\Ui\Component\Reviews\Listing\Column\Actions" sortOrder="200">
+            <settings>
+                <indexField>id</indexField>
+            </settings>
+        </actionsColumn>
+    </columns>
+</listing>
+
